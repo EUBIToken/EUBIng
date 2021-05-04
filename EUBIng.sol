@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//1th candidate for deployment - up community reviews
+//1th candidate for deployment - up community for reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
