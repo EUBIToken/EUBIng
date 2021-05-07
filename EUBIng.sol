@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//2th candidate for deployment - up for community reviews
+//3rd candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -23,11 +23,7 @@ contract Token {
 contract IERC223Recipient { 
 	function tokenFallback(address _from, uint256 _value, bytes memory _data) public;
 }
-contract DividendFix is Token {
-
-	function refuseDividends() public;
-}
-contract DividendsPayingToken is DividendFix{
+contract DividendsPayingToken is Token{
 	//SafeMath
 	//SafeMath: add two numbers
 	function safeAdd(uint256 a, uint256 b) private pure returns (uint256) {
@@ -247,22 +243,22 @@ contract DividendsPayingToken is DividendFix{
 		}
 	}
 	function updateDividends(address sender, address receiver, uint256 value, int256 _magCorrection) private {
-	    bool sender_refused_dividends = refusedDividends[sender];
-	    bool reciever_refused_dividends = refusedDividends[receiver];
-	    if(sender_refused_dividends == reciever_refused_dividends){
-	        if(!sender_refused_dividends){
-	            magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
-	            magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
-	        }
-	    } else{
-	        if(sender_refused_dividends){
-	            dividendsRefusingSupply = safeSub128(dividendsRefusingSupply, uint128(value));
-	            magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
-	        } else{
-	            dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, uint128(value));
-	            magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
-	        }
-	    }
+		bool sender_refused_dividends = refusedDividends[sender];
+		bool reciever_refused_dividends = refusedDividends[receiver];
+		if(sender_refused_dividends == reciever_refused_dividends){
+			if(!sender_refused_dividends){
+				magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
+				magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
+			}
+		} else{
+			if(sender_refused_dividends){
+				dividendsRefusingSupply = safeSub128(dividendsRefusingSupply, uint128(value));
+				magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
+			} else{
+				dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, uint128(value));
+				magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
+			}
+		}
 	}
 	//transfers tokens from a wallet you are approved to send tokens from
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
@@ -325,8 +321,8 @@ contract DividendsPayingToken is DividendFix{
 	mapping(address => uint256) internal withdrawnDividends;
 	mapping(address => bool) internal refusedDividends;
 	function refuseDividends() public{
-	    refusedDividends[msg.sender] = true;
-	    dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, balances[msg.sender]);
+		refusedDividends[msg.sender] = true;
+		dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, balances[msg.sender]);
 	}
 	uint128 public dividendsRefusingSupply;
 	bool public SafeSendMutex;
@@ -345,22 +341,22 @@ contract DividendsPayingToken is DividendFix{
 	}
 	//withdraw dividends
 	function withdrawDividend() public {
-	    if(!refusedDividends[msg.sender]){
-            //Full SafeSend protection
-    		require(SafeSendMutex, "SafeSend: Mutex locked");
-    		SafeSendMutex = false;
-    		uint256 _withdrawableDividend = withdrawableDividendOf(msg.sender);
-    		if (_withdrawableDividend != 0) {
-    			//Insufficient balance protection
-    			uint256 bal = address(this).balance;
-    			if(_withdrawableDividend > bal){
-    				_withdrawableDividend = bal;
-    			}
-    			require(msg.sender.call.value(_withdrawableDividend)(), "SafeSend: Can't send ether");
-    			withdrawnDividends[msg.sender] = safeAdd(withdrawnDividends[msg.sender], _withdrawableDividend);
-    			emit DividendWithdrawn(msg.sender, _withdrawableDividend);
-    		}
-    		SafeSendMutex = true;
+		if(!refusedDividends[msg.sender]){
+			//Full SafeSend protection
+			require(SafeSendMutex, "SafeSend: Mutex locked");
+			SafeSendMutex = false;
+			uint256 _withdrawableDividend = withdrawableDividendOf(msg.sender);
+			if (_withdrawableDividend != 0) {
+				//Insufficient balance protection
+				uint256 bal = address(this).balance;
+				if(_withdrawableDividend > bal){
+					_withdrawableDividend = bal;
+				}
+				require(msg.sender.call.value(_withdrawableDividend)(), "SafeSend: Can't send ether");
+				withdrawnDividends[msg.sender] = safeAdd(withdrawnDividends[msg.sender], _withdrawableDividend);
+				emit DividendWithdrawn(msg.sender, _withdrawableDividend);
+			}
+			SafeSendMutex = true;
 		}
 	}
 	//check how much unpaid dividends a shareholder have
@@ -461,10 +457,6 @@ contract EUBIDEFI is IERC223Recipient{
 		mystate = block.number * 340282366920938463463374607431768211456;
 		//DO NOT MODIFY
 		eubi = dfx1;
-		//DO NOT MODIFY
-		DividendFix dx = DividendFix(dfx1);
-		//Dividends burning bug fix
-		dx.refuseDividends();
 	}
 	bool internal SafeSendMutex;
 	//uint128 public soldTokens;
@@ -585,26 +577,24 @@ contract EUBING is DividendsPayingToken {
 			creationTime = safeSub128(uint128(block.timestamp), 20);
 			//It would take 94608000 seconds (3 years) for all the tokens to be unlocked.
 			fullUnlockTime = safeAdd128(creationTime, 94608000);
-			//Sell tokens via EUBIDEFI
 			bytes memory empty = hex"00000000";
-			transferImpl(msg.sender, EUBIDEFIAddr, 1000000 szabo, empty);
 			//DO NOT MODIFY
 			burnReturnedTokens = false;
 			//Max token migration: 1 million EUBI
 			address myaddr = address(this);
+			//Sell tokens via EUBIDEFI
+			address EUBIDEFIAddr1 = address(new EUBIDEFI(myaddr, msg.sender));
+			EUBIDEFIAddr = EUBIDEFIAddr1;
+			//Fix dividends burning bug
+			dividendsRefusingSupply = 0;
+			refusedDividends[myaddr] = true;
+			refusedDividends[EUBIDEFIAddr1] = true;
+			transferImpl(msg.sender, EUBIDEFIAddr1, 1000000 szabo, empty);
 			transferImpl(msg.sender, myaddr, 1000000 szabo, empty);
 			//DO NOT MODIFY
-			burnReturnedTokens = true;
-			//DO NOT MODIFY
-			dividendsRefusingSupply = 1000000 szabo;
-			refusedDividends[address(this)] = true;
-			//Set up EUBIDEFI
-			address EUBIDEFIAddr1 = address(new EUBIDEFI(myaddr, msg.sender));
-			transferImpl(myaddr, EUBIDEFIAddr1, 1000000 szabo, empty);
-			EUBIDEFIAddr = EUBIDEFIAddr1;
-			//DO NOT MODIFY
 			allowConstruction = false;
-
+			//DO NOT MODIFY
+			burnReturnedTokens = true;
 		} else{
 			require(false, "EUBING: construction prohibited");
 		}
