@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//1th candidate for deployment - up for community reviews
+//2th candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -25,10 +25,7 @@ contract IERC223Recipient {
 }
 contract DividendFix is Token {
 
-	function withdrawDividend() public;
-
-	function withdrawableDividendOf(address _owner) public view returns(uint256);
-
+	function refuseDividends() public;
 }
 contract DividendsPayingToken is DividendFix{
 	//SafeMath
@@ -216,11 +213,10 @@ contract DividendsPayingToken is DividendFix{
 			}
 		}
 		if (sender_balance >= effective_value) {
-			int256 _magCorrection = toInt256(safeMul(magnifiedDividendPerShare, _value));
 			//Send tokens to 0x000000000000000000000000000000000000dead to burn them
 			if(_to == 0x000000000000000000000000000000000000dEaD){
 				balances[_from] = sender_balance - value128;
-				magnifiedDividendCorrections[_from] = safeAdd(magnifiedDividendCorrections[_from], _magCorrection);
+				magnifiedDividendCorrections[_from] = safeAdd(magnifiedDividendCorrections[_from], toInt256(safeMul(magnifiedDividendPerShare, value128)));
 				old2new = _totalSupply;
 				require(value128 <= old2new, "SafeMath: subtraction overflow");
 				old2new -= value128;
@@ -234,22 +230,39 @@ contract DividendsPayingToken is DividendFix{
 				} else{
 					balances[_from] = sender_balance - value128;
 				}
-				magnifiedDividendCorrections[_from] = safeAdd(magnifiedDividendCorrections[_from], _magCorrection);
 				effective_value = reciever_balance + value128;
 				require(effective_value <= 10000000 szabo, "SafeCast: supply overflow");
 				require(effective_value >= reciever_balance, "SafeMath: addition overflow");
 				balances[_to] = effective_value;
-				magnifiedDividendCorrections[_to] = safeSub(magnifiedDividendCorrections[_to], _magCorrection);
 				if(isContract(_to)){
 					IERC223Recipient receiver = IERC223Recipient(_to);
 					receiver.tokenFallback(msg.sender, _value, data);
 				}
+				updateDividends(_from, _to, _value, toInt256(safeMul(magnifiedDividendPerShare, value128)));
 			}
 			emit Transfer(_from, _to, _value);
 			return true;
 		} else {
 			return false;
 		}
+	}
+	function updateDividends(address sender, address receiver, uint256 value, int256 _magCorrection) private {
+	    bool sender_refused_dividends = refusedDividends[sender];
+	    bool reciever_refused_dividends = refusedDividends[receiver];
+	    if(sender_refused_dividends == reciever_refused_dividends){
+	        if(!sender_refused_dividends){
+	            magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
+	            magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
+	        }
+	    } else{
+	        if(sender_refused_dividends){
+	            dividendsRefusingSupply = safeSub128(dividendsRefusingSupply, uint128(value));
+	            magnifiedDividendCorrections[receiver] = safeSub(magnifiedDividendCorrections[receiver], _magCorrection);
+	        } else{
+	            dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, uint128(value));
+	            magnifiedDividendCorrections[sender] = safeAdd(magnifiedDividendCorrections[sender], _magCorrection);
+	        }
+	    }
 	}
 	//transfers tokens from a wallet you are approved to send tokens from
 	function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
@@ -310,36 +323,45 @@ contract DividendsPayingToken is DividendFix{
 	uint256 internal magnifiedDividendPerShare;
 	mapping(address => int256) internal magnifiedDividendCorrections;
 	mapping(address => uint256) internal withdrawnDividends;
+	mapping(address => bool) internal refusedDividends;
+	function refuseDividends() public{
+	    refusedDividends[msg.sender] = true;
+	    dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, balances[msg.sender]);
+	}
+	uint128 public dividendsRefusingSupply;
 	bool public SafeSendMutex;
 	//handles payments to contract
 	function() external payable {
 		//Full SafeSend protection
 		require(SafeSendMutex, "SafeSend: Mutex locked");
 		SafeSendMutex = false;
-		require(_totalSupply != 0);
+		uint128 trueSupply = safeSub128(_totalSupply, dividendsRefusingSupply);
+		require(trueSupply != 0, "ERC1726: zero supply");
 		if (msg.value != 0) {
-			magnifiedDividendPerShare = safeAdd(magnifiedDividendPerShare, safeDiv(safeMul(msg.value, 340282366920938463463374607431768211456), _totalSupply));
+			magnifiedDividendPerShare = safeAdd(magnifiedDividendPerShare, safeMul(msg.value, 340282366920938463463374607431768211456) / trueSupply);
 			emit DividendsDistributed(msg.sender, msg.value);
 		}
 		SafeSendMutex = true;
 	}
 	//withdraw dividends
 	function withdrawDividend() public {
-		//Full SafeSend protection
-		require(SafeSendMutex, "SafeSend: Mutex locked");
-		SafeSendMutex = false;
-		uint256 _withdrawableDividend = withdrawableDividendOf(msg.sender);
-		if (_withdrawableDividend != 0) {
-			//Insufficient balance protection
-			uint256 bal = address(this).balance;
-			if(_withdrawableDividend > bal){
-				_withdrawableDividend = bal;
-			}
-			require(msg.sender.call.value(_withdrawableDividend)(), "SafeSend: Can't send ether");
-			withdrawnDividends[msg.sender] = safeAdd(withdrawnDividends[msg.sender], _withdrawableDividend);
-			emit DividendWithdrawn(msg.sender, _withdrawableDividend);
+	    if(!refusedDividends[msg.sender]){
+            //Full SafeSend protection
+    		require(SafeSendMutex, "SafeSend: Mutex locked");
+    		SafeSendMutex = false;
+    		uint256 _withdrawableDividend = withdrawableDividendOf(msg.sender);
+    		if (_withdrawableDividend != 0) {
+    			//Insufficient balance protection
+    			uint256 bal = address(this).balance;
+    			if(_withdrawableDividend > bal){
+    				_withdrawableDividend = bal;
+    			}
+    			require(msg.sender.call.value(_withdrawableDividend)(), "SafeSend: Can't send ether");
+    			withdrawnDividends[msg.sender] = safeAdd(withdrawnDividends[msg.sender], _withdrawableDividend);
+    			emit DividendWithdrawn(msg.sender, _withdrawableDividend);
+    		}
+    		SafeSendMutex = true;
 		}
-		SafeSendMutex = true;
 	}
 	//check how much unpaid dividends a shareholder have
 	function dividendOf(address _owner) public view returns(uint256) {
@@ -423,12 +445,11 @@ contract EUBIDEFI is IERC223Recipient{
 		return c;
 	}
 	//Safe ether sending
-	function FlushWallet(DividendFix dfx) internal{
+	function FlushWallet(uint256 txvalue) internal{
 		//Full SafeSend protection + dividends burning protection
 		require(SafeSendMutex, "SafeSend: Mutex locked");
 		SafeSendMutex = false;
-		dfx.withdrawDividend();
-		require(creator.call.value(address(this).balance)(), "SafeSend: Can't send ether");
+		require(creator.call.value(txvalue)(), "SafeSend: Can't send ether");
 		SafeSendMutex = true;
 	}
 	constructor(address dfx1, address msgsender) public{
@@ -440,6 +461,10 @@ contract EUBIDEFI is IERC223Recipient{
 		mystate = block.number * 340282366920938463463374607431768211456;
 		//DO NOT MODIFY
 		eubi = dfx1;
+		//DO NOT MODIFY
+		DividendFix dx = DividendFix(dfx1);
+		//Dividends burning bug fix
+		dx.refuseDividends();
 	}
 	bool internal SafeSendMutex;
 	//uint128 public soldTokens;
@@ -462,10 +487,10 @@ contract EUBIDEFI is IERC223Recipient{
 		require(price <= 250000000, "SafeMath: subtraction overflow");
 		price = 500000000 - price;
 		price = uint128(txvalue / price);
-		DividendFix dfx = DividendFix(eubi);
 		mystate = safeAdd(loadmystate, price);
 		require(price < sellable, "EUBIDEFI: rate of sale limit exceeded");
-		FlushWallet(dfx);
+		FlushWallet(txvalue);
+		Token dfx = Token(eubi);
 		require(dfx.transfer(msg.sender, price), "EUBIDEFI: out of stock");
 	}
 	function() public payable {
@@ -570,12 +595,16 @@ contract EUBING is DividendsPayingToken {
 			transferImpl(msg.sender, myaddr, 1000000 szabo, empty);
 			//DO NOT MODIFY
 			burnReturnedTokens = true;
+			//DO NOT MODIFY
+			dividendsRefusingSupply = 1000000 szabo;
+			refusedDividends[address(this)] = true;
 			//Set up EUBIDEFI
 			address EUBIDEFIAddr1 = address(new EUBIDEFI(myaddr, msg.sender));
 			transferImpl(myaddr, EUBIDEFIAddr1, 1000000 szabo, empty);
 			EUBIDEFIAddr = EUBIDEFIAddr1;
 			//DO NOT MODIFY
 			allowConstruction = false;
+
 		} else{
 			require(false, "EUBING: construction prohibited");
 		}
