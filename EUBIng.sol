@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//3rd candidate for deployment - up for community reviews
+//4th candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -321,8 +321,11 @@ contract DividendsPayingToken is Token{
 	mapping(address => uint256) internal withdrawnDividends;
 	mapping(address => bool) internal refusedDividends;
 	function refuseDividends() public{
-		refusedDividends[msg.sender] = true;
-		dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, balances[msg.sender]);
+		if(!refusedDividends[msg.sender]){
+			withdrawDividend();
+			refusedDividends[msg.sender] = true;
+			dividendsRefusingSupply = safeAdd128(dividendsRefusingSupply, balances[msg.sender]);
+		}
 	}
 	uint128 public dividendsRefusingSupply;
 	bool public SafeSendMutex;
