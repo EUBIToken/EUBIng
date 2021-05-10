@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//4th candidate for deployment - up for community reviews
+//5th candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -205,6 +205,7 @@ contract DividendsPayingToken is Token{
 			if(effective_value > sender_balance){
 				return false;
 			} else{
+				Token oldEUBI = Token(0x8AFA1b7a8534D519CB04F4075D3189DF8a6738C1);
 				oldEUBI.transferFrom(_from, address(this), old2new);
 			}
 		}
@@ -275,6 +276,7 @@ contract DividendsPayingToken is Token{
 		return false;
 	}
 	function availableOldEUBI(address _owner) public view returns (uint256 balance){
+		Token oldEUBI = Token(0x8AFA1b7a8534D519CB04F4075D3189DF8a6738C1);
 		uint256 aoe = oldEUBI.allowance(_owner, address(this));
 		uint256 temp3 = oldEUBI.balanceOf(_owner);
 		if(aoe < temp3){
@@ -398,7 +400,6 @@ contract DividendsPayingToken is Token{
 		return safeSub128(10000000 szabo, unlocked());
 	}
 	
-	Token public oldEUBI;
 }
 
 contract EUBIDEFI is IERC223Recipient{
@@ -559,8 +560,6 @@ contract EUBING is DividendsPayingToken {
 	//constructor
 	constructor() public {
 		if(allowConstruction){
-			//Old EUBI token
-			oldEUBI = Token(0x8AFA1b7a8534D519CB04F4075D3189DF8a6738C1);
 			//DO NOT MODIFY
 			SafeSendMutex = true;
 			//Set up creator's wallet
