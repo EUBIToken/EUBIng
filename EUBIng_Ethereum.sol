@@ -229,4 +229,9 @@ contract UniswapV2EUBING {
 	function withdrawnDividendOf(address _owner) public view returns(uint256) {
 		return withdrawnDividends[_owner];
 	}
+	    
+	function burn(uint256 amount) public returns (bool){
+		_burn(msg.sender, amount);
+		return true;
+	}
 }
