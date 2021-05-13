@@ -127,6 +127,9 @@ contract UniswapV2EUBING {
 	}
 
 	function _burn(address from, uint value) internal {
+		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		magnifiedDividendCorrections[from] = magnifiedDividendCorrections[from].add((magnifiedDividendPerShare.mul(value)).toInt256Safe());
 		balanceOf[from] = balanceOf[from].sub(value);
 		totalSupply = totalSupply.sub(value);
 		emit Transfer(from, address(0), value);
