@@ -8,7 +8,11 @@ The trustee service allows creation of revocable/irrevocable trusts.
 ## Roadmap
 
 18/05/2021: MintME deployment
+
 25/05/2021: MintME trustee service launch
+
 18/06/2021: Ethereum deployment
+
 19/06/2021: Uniswap V2 pair creation on Ethereum
+
 25/06/2021: Ethereum trustee service launch
