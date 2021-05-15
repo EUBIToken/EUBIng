@@ -491,7 +491,7 @@ contract EUBIDEFI is IERC223Recipient{
 		require(dfx.transfer(msg.sender, price), "EUBIDEFI: out of stock");
 	}
 	//safeBuy throws if index mismatches
-	function safeBuy(int256 forced_index) external payable{
+	function safeBuy(int256 forced_window_index) external payable{
 		uint256 txvalue = msg.value;
 		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
 		uint256 loadmystate = mystate;
