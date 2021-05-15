@@ -7,7 +7,7 @@ The trustee service allows creation of revocable/irrevocable trusts.
 
 ## Roadmap
 
-20/05/2021: MintME deployment and EUBIDEFI deployment
+25/05/2021: MintME deployment and EUBIDEFI deployment
 
 25/05/2021: MintME trustee service launch
 
