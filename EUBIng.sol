@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//6th candidate for deployment - up for community reviews
+//7th candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -479,7 +479,8 @@ contract EUBIDEFI is IERC223Recipient{
 		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
 		sellable = sellable - soldTokens;
 		//price algo for dutch auction
-		uint128 price = (250000000 * (index % 30)) / 29;
+		index = (uint128(block.number) % 30);
+		uint128 price = (250000000 * index) / 29;
 		require(price <= 250000000, "SafeMath: subtraction overflow");
 		price = 500000000 - price;
 		price = uint128(txvalue / price);
@@ -495,13 +496,14 @@ contract EUBIDEFI is IERC223Recipient{
 		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
 		uint256 loadmystate = mystate;
 		uint128 index = safeSub128(uint128(block.number), uint128(loadmystate / 340282366920938463463374607431768211456));
-		require(index == forced_index, "EUBIDEFI: index mismatch");
 		uint128 sellable = (342465753424657532 * index) / 30;
 		uint128 soldTokens = uint128(loadmystate % 340282366920938463463374607431768211456);
 		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
 		sellable = sellable - soldTokens;
 		//price algo for dutch auction
-		uint128 price = (250000000 * (index % 30)) / 29;
+		index = (uint128(block.number) % 30);
+		require(index == forced_window_index, "EUBIDEFI: window index mismatch");
+		uint128 price = (250000000 * index) / 29;
 		require(price <= 250000000, "SafeMath: subtraction overflow");
 		price = 500000000 - price;
 		price = uint128(txvalue / price);
