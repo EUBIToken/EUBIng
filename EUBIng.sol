@@ -489,6 +489,28 @@ contract EUBIDEFI is IERC223Recipient{
 		Token dfx = Token(eubi);
 		require(dfx.transfer(msg.sender, price), "EUBIDEFI: out of stock");
 	}
+	//safeBuy throws if index mismatches
+	function safeBuy(int256 forced_index) external payable{
+		uint256 txvalue = msg.value;
+		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
+		uint256 loadmystate = mystate;
+		uint128 index = safeSub128(uint128(block.number), uint128(loadmystate / 340282366920938463463374607431768211456));
+		require(index == forced_index, "EUBIDEFI: index mismatch");
+		uint128 sellable = (342465753424657532 * index) / 30;
+		uint128 soldTokens = uint128(loadmystate % 340282366920938463463374607431768211456);
+		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
+		sellable = sellable - soldTokens;
+		//price algo for dutch auction
+		uint128 price = (250000000 * (index % 30)) / 29;
+		require(price <= 250000000, "SafeMath: subtraction overflow");
+		price = 500000000 - price;
+		price = uint128(txvalue / price);
+		mystate = safeAdd(loadmystate, price);
+		require(price < sellable, "EUBIDEFI: rate of sale limit exceeded");
+		FlushWallet(txvalue);
+		Token dfx = Token(eubi);
+		require(dfx.transfer(msg.sender, price), "EUBIDEFI: out of stock");
+	}
 	function() public payable {
 		if(SafeSendMutex){
 			recieveDeposit();
