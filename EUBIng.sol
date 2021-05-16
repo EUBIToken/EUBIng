@@ -461,66 +461,37 @@ contract EUBIDEFI is IERC223Recipient{
 		mystate = block.number * 340282366920938463463374607431768211456;
 		//DO NOT MODIFY
 		eubi = dfx1;
-		//DO NOT MODIFY
-		mystate2 = 0;
 	}
 	bool internal SafeSendMutex;
-	//packed value: two 128-bit numbers merged into a 256-bit number
-	//saves 20,000 gas
+	//uint128 public soldTokens;
+	//uint128 public creationBlock;
 	uint256 private mystate;
 	address public creator;
 	address public eubi;
-	//packed value: two 128-bit numbers merged into a 256-bit number
-	//saves 20,000 gas
-	uint256 private mystate2;
-	//handles payments to contracts - highly docummented for blockchain noobs to understand
+	//handles payments to contracts
 	function recieveDeposit() payable public{
-		//cast to 128-bit for gas optimization later on in code
-		require(block.number < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
-		uint128 bn128 = uint128(block.number);
-		uint256 loadmystate = mystate2;
-		//how many blocks have passed since the last reset? Prices take 1 month to decay from 500 MintME to just 250.
-		uint128 lastResetHeight = uint128(loadmystate % 340282366920938463463374607431768211456);
-		//resets are performed every 500 EUBIng tokens sold.
-		uint128 tokensSoldSinceReset = uint128(loadmystate / 340282366920938463463374607431768211456);
-		//local variable reuse
-		loadmystate = mystate;
-		//cast to 128-bit for gas optimization later on in code
-		require(msg.value < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
-		uint128 txvalue = uint128(msg.value);
-		uint128 index = safeSub128(bn128, uint128(loadmystate / 340282366920938463463374607431768211456));
-		//Maximum 342.465753424657532 EUBIng tokens sold per hour.
+		uint256 txvalue = msg.value;
+		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
+		uint256 loadmystate = mystate;
+		uint128 index = safeSub128(uint128(block.number), uint128(loadmystate / 340282366920938463463374607431768211456));
 		uint128 sellable = (342465753424657532 * index) / 30;
 		uint128 soldTokens = uint128(loadmystate % 340282366920938463463374607431768211456);
 		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
 		sellable = sellable - soldTokens;
-		//price algo for dutch auction
-		index = safeSub128(bn128, lastResetHeight);
-		if(index > 21599){
-			index = 21599;
+		//local variable index is being reused
+		//dutch auction: lower the price if we are more than 500 EUBIng tokens behind the sale goal.
+		index = 0;
+		if(sellable > 500 szabo){
+		    index = (sellable - 500 szabo) / 2 szabo;
 		}
-		uint128 price = (250000000 * index) / 21599;
-		require(price <= 250000000, "SafeMath: subtraction overflow");
-		price = 500000000 - price;
-		//local variable reuse: price becomes amount
+		if(index > 250){
+		    index = 250;
+		}
+		uint128 price = safeSub128(500 ether, index * 1 ether);
 		price = uint128(txvalue / price);
-		//local variable reuse: loadmystate gets incremented directly
-		loadmystate += price;
-		require(loadmystate > price, "SafeMath: addition overflow");
-		//extra safety check
-		safeAdd128(price, soldTokens);
-		mystate = loadmystate;
-		//Enforces 342.465753424657532 EUBIng tokens sold per hour.
+		mystate = safeAdd(loadmystate, price);
 		require(price < sellable, "EUBIDEFI: rate of sale limit exceeded");
-		tokensSoldSinceReset = safeAdd128(tokensSoldSinceReset, price);
-		if(tokensSoldSinceReset > 500 szabo){
-			mystate2 = block.number;
-		} else{
-			mystate2 = safeAdd(block.number, safeMul(tokensSoldSinceReset, 340282366920938463463374607431768211456));
-		}
-		//the MintME coins goes to creator
 		FlushWallet(txvalue);
-		//Send the tokens last, since we are ERC-223 and we don't want re-entrancy attacks.
 		Token dfx = Token(eubi);
 		require(dfx.transfer(msg.sender, price), "EUBIDEFI: out of stock");
 	}
