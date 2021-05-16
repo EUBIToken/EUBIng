@@ -13,6 +13,12 @@ We used a slightly modified version of the dutch auction that is blockchain-frie
 
 We used the dutch auction since it is very lightweight on gas (only 59700 gas per buy order), and is more blockchain-friendly than the vickrey/english auction.
 
+## Token migration
+
+Up to 1 Million EUBI classic tokens can be upgraded into EUBIng tokens. All you need to do is to approve the EUBIng smart contract to spend some of your old EUBI classic tokens. Your old EUBI tokens will be migrated when you run out of EUBIng tokens. Let's say you have 1 EUBIng token and 2 EUBI classic tokens. If you try to spend 1.5 EUBIng after having approved the EUBIng smart contract to spend your EUBI classic tokens, the EUBIng smart contract would first try to spend 1 EUBIng. Since we don't have sufficent balance to complete the transaction, the EUBIng smart contract would migrate all our EUBI classic tokens, leaving us with a balance of 1.5 EUBIng after the transaction. Also, you can send to your own address to force migrate the tokens. Note that your indicated balnce is your EUBIng balance + EUBI classic available for migration. The old EUBI classic tokens will be burned.
+
+[Information about the ERC-20 approve function](https://docs.openzeppelin.com/contracts/2.x/api/token/erc20#IERC20-approve-address-uint256-)
+
 ## Roadmap
 
 18/05/2021: MintME deployment and EUBIDEFI deployment
