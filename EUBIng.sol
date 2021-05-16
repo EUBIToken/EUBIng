@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//7th candidate for deployment - up for community reviews
+//9th candidate for deployment - up for community reviews
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -207,6 +207,7 @@ contract DividendsPayingToken is Token{
 			} else{
 				Token oldEUBI = Token(0x8AFA1b7a8534D519CB04F4075D3189DF8a6738C1);
 				oldEUBI.transferFrom(_from, address(this), old2new);
+				balances[address(this)] = safeSub128(balances[address(this)], old2new);
 			}
 		}
 		if (sender_balance >= effective_value) {
