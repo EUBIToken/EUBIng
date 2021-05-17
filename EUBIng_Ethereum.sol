@@ -119,22 +119,46 @@ contract UniswapV2EUBING {
 		fullUnlockTime = creationTime.sub(94608000);
 		creator = msg.sender;
 	}
+	
+	mapping(address => bool) private dividendsOptIn;
+	uint256 public dividendsRecievingSupply;
+	
+	function canRecieveDividends(address addr) public view returns (bool){
+		return !isContract(addr) || dividendsOptIn[addr];
+	}
+	
+	function enableDividends() external{
+		//Smart contracts are presumed to refuse dividends unless otherwise stated
+		if(!dividendsOptIn[msg.sender]){
+			dividendsOptIn[msg.sender] = true;
+			TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+			uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+			magnifiedDividendCorrections[msg.sender] = magnifiedDividendCorrections[msg.sender].sub((magnifiedDividendPerShare.mul(balanceOf[msg.sender])).toInt256Safe());
+			dividendsRecievingSupply = dividendsRecievingSupply.add(balanceOf[msg.sender]);
+		}
+	}
 
 	function _mint(address to, uint value) internal {
 		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
 		magnifiedDividendCorrections[to] = magnifiedDividendCorrections[to].sub((magnifiedDividendPerShare.mul(value)).toInt256Safe());
 		totalSupply = totalSupply.add(value);
+		if(canRecieveDividends(to)){
+			dividendsRecievingSupply = dividendsRecievingSupply.add(value);
+		}
 		balanceOf[to] = balanceOf[to].add(value);
 		emit Transfer(address(0), to, value);
 	}
 
 	function _burn(address from, uint value) internal {
 		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
 		magnifiedDividendCorrections[from] = magnifiedDividendCorrections[from].add((magnifiedDividendPerShare.mul(value)).toInt256Safe());
 		balanceOf[from] = balanceOf[from].sub(value);
 		totalSupply = totalSupply.sub(value);
+		if(canRecieveDividends(from)){
+			dividendsRecievingSupply = dividendsRecievingSupply.sub(value);
+		}
 		emit Transfer(from, address(0), value);
 	}
 
@@ -163,7 +187,7 @@ contract UniswapV2EUBING {
 			require(balanceAfter >= locked(), "EUBIUnlocker: not unlocked");
 		}
 		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
 		int256 _magCorrection = magnifiedDividendPerShare.mul(value).toInt256Safe();
 		magnifiedDividendCorrections[from] = magnifiedDividendCorrections[from].add(_magCorrection);
 		magnifiedDividendCorrections[to] = magnifiedDividendCorrections[to].sub(_magCorrection);
@@ -184,7 +208,7 @@ contract UniswapV2EUBING {
 			require(balanceAfter >= locked(), "EUBIUnlocker: not unlocked");
 		}
 		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
 		int256 _magCorrection = magnifiedDividendPerShare.mul(_value).toInt256Safe();
 		magnifiedDividendCorrections[msg.sender] = magnifiedDividendCorrections[msg.sender].add(_magCorrection);
 		magnifiedDividendCorrections[_to] = magnifiedDividendCorrections[_to].sub(_magCorrection);
@@ -234,18 +258,30 @@ contract UniswapV2EUBING {
 	uint256 public totalWithdrawnDividends = 0;
 	function accumulativeDividendOf(address _owner) public view returns(uint256) {
 		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).div(dividendsRecievingSupply).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
 		return magnifiedDividendPerShare.mul(balanceOf[_owner]).toInt256Safe().add(magnifiedDividendCorrections[_owner]).toUint256Safe() / 340282366920938463463374607431768211456;
 	}
 	event DividendWithdrawn(address a, uint256 b);
-	function withdrawDividend() public {
+	function withdrawDividend() external {
 	uint256 _withdrawableDividend = withdrawableDividendOf(msg.sender);
-		if (_withdrawableDividend > 0) {
+		if (_withdrawableDividend > 0 && canRecieveDividends(msg.sender)) {
 			totalWithdrawnDividends = totalWithdrawnDividends.add(_withdrawableDividend);
 			withdrawnDividends[msg.sender] = withdrawnDividends[msg.sender].add(_withdrawableDividend);
 			TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 			require(usdc.transfer(msg.sender, _withdrawableDividend));
 			emit DividendWithdrawn(msg.sender, _withdrawableDividend);
+		}
+	}
+	
+	function withdrawDividendFor(address addr) external {
+		require(!isContract(addr), "This function should not be called on a contract");
+		uint256 _withdrawableDividend = withdrawableDividendOf(addr);
+		if (_withdrawableDividend > 0) {
+			totalWithdrawnDividends = totalWithdrawnDividends.add(_withdrawableDividend);
+			withdrawnDividends[addr] = withdrawnDividends[addr].add(_withdrawableDividend);
+			TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+			require(usdc.transfer(addr, _withdrawableDividend));
+			emit DividendWithdrawn(addr, _withdrawableDividend);
 		}
 	}
 
