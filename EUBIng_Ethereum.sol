@@ -74,6 +74,9 @@ contract TokenInterface{
 
 	function transfer(address _to, uint256 _value) public returns (bool success);
 }
+contract IERC223Recipient{
+	function tokenFallback(address _from, uint _value, bytes memory _data) public;
+}
 contract UniswapV2EUBING {
 	using UnsignedSafeMath for uint256;
 	using SignedSafeMath for int256;
@@ -166,7 +169,32 @@ contract UniswapV2EUBING {
 		magnifiedDividendCorrections[to] = magnifiedDividendCorrections[to].sub(_magCorrection);
 		balanceOf[from] = balanceAfter;
 		balanceOf[to] = balanceOf[to].add(value);
+		if(isContract(to)){
+			IERC223Recipient receiver = IERC223Recipient(to);
+			bytes memory empty = hex"00000000";
+			receiver.tokenFallback(msg.sender, value, empty);
+		}
 		emit Transfer(from, to, value);
+	}
+	function transfer(address _to, uint _value, bytes memory _data) public returns (bool){
+		// Standard function transfer similar to ERC20 transfer with no _data .
+		// Added due to backwards compatibility reasons .
+		uint256 balanceAfter = balanceOf[msg.sender].sub(_value);
+		if(msg.sender == creator){
+			require(balanceAfter >= locked(), "EUBIUnlocker: not unlocked");
+		}
+		TokenInterface usdc = TokenInterface(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+		uint256 magnifiedDividendPerShare = usdc.balanceOf(address(this)).add(totalWithdrawnDividends).mul(340282366920938463463374607431768211456);
+		int256 _magCorrection = magnifiedDividendPerShare.mul(_value).toInt256Safe();
+		magnifiedDividendCorrections[msg.sender] = magnifiedDividendCorrections[msg.sender].add(_magCorrection);
+		magnifiedDividendCorrections[_to] = magnifiedDividendCorrections[_to].sub(_magCorrection);
+		balanceOf[msg.sender] = balanceAfter;
+		balanceOf[_to] = balanceOf[_to].add(_value);
+		if(isContract(_to)){
+			IERC223Recipient receiver = IERC223Recipient(_to);
+			receiver.tokenFallback(msg.sender, _value, _data);
+		}
+		emit Transfer(msg.sender, _to, _value);
 	}
 
 	function approve(address spender, uint value) external returns (bool) {
@@ -232,9 +260,20 @@ contract UniswapV2EUBING {
 	function withdrawnDividendOf(address _owner) public view returns(uint256) {
 		return withdrawnDividends[_owner];
 	}
-	    
+	
 	function burn(uint256 amount) public returns (bool){
 		_burn(msg.sender, amount);
 		return true;
+	}
+	
+	function isContract(address account) internal view returns (bool) {
+		// This method relies in extcodesize, which returns 0 for contracts in
+		// construction, since the code is only stored at the end of the
+		// constructor execution.
+
+		uint256 size;
+		// solhint-disable-next-line no-inline-assembly
+		assembly { size := extcodesize(account) }
+		return size > 0;
 	}
 }
