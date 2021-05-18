@@ -30,3 +30,8 @@ Up to 1 Million EUBI classic (deployed and traded on MintMe.com) tokens can be u
 19/06/2021: Uniswap V2 pair creation on Ethereum
 
 25/06/2021: Ethereum trustee service launch
+
+
+Address of EUBIng token contract: 0xfc502c4126fe45456ccc261ad26bca6bca7c4735
+
+Address of EUBIDEFI token contract: 0xF46C1781aab1962f428Ff79E013fc446e79A8D8E
