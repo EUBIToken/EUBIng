@@ -1,5 +1,5 @@
 pragma solidity ^0.4.16;
-//10th candidate for deployment - up for community reviews
+//Deployed on MintME Blockchain
 
 contract Token {
 	//fill interface with fake functions to trick the linter
@@ -484,10 +484,10 @@ contract EUBIDEFI is IERC223Recipient{
 		//dutch auction: lower the price if we are more than 500 EUBIng tokens behind the sale goal.
 		index = 0;
 		if(sellable > 500 szabo){
-		    index = (sellable - 500 szabo) / 2 szabo;
+			index = (sellable - 500 szabo) / 2 szabo;
 		}
 		if(index > 250){
-		    index = 250;
+			index = 250;
 		}
 		uint128 price = safeSub128(500 ether, index * 1 ether);
 		price = uint128(txvalue / price);
@@ -572,13 +572,13 @@ contract EUBING is DividendsPayingToken {
 			SafeSendMutex = true;
 			//Set up creator's wallet
 			_totalSupply = 10000000 szabo;
-			magnifiedDividendCorrections[msg.sender] = safeSub(0, toInt256(safeMul(magnifiedDividendPerShare, 10000000 szabo)));
-			balances[msg.sender] = 10000000 szabo;
+			magnifiedDividendCorrections[0x7a7C3dcBa4fBf456A27961c6a88335b026052C65] = safeSub(0, toInt256(safeMul(magnifiedDividendPerShare, 10000000 szabo)));
+			balances[0x7a7C3dcBa4fBf456A27961c6a88335b026052C65] = 10000000 szabo;
 			//Token configuration
 			name = "EUB Insurance";
 			decimals = 12;
 			symbol = "EUBI";
-			creator = msg.sender;
+			creator = 0x7a7C3dcBa4fBf456A27961c6a88335b026052C65;
 			//Set up token release period
 			//NOTE: we need to initially unlock an additional 2 million EUBI for Defi IPO + migration
 			initialUnlock = 5370091 szabo;
@@ -593,14 +593,14 @@ contract EUBING is DividendsPayingToken {
 			//Max token migration: 1 million EUBI
 			address myaddr = address(this);
 			//Sell tokens via EUBIDEFI
-			address EUBIDEFIAddr1 = address(new EUBIDEFI(myaddr, msg.sender));
+			address EUBIDEFIAddr1 = address(new EUBIDEFI(myaddr, 0x7a7C3dcBa4fBf456A27961c6a88335b026052C65));
 			EUBIDEFIAddr = EUBIDEFIAddr1;
 			//Fix dividends burning bug
 			dividendsRefusingSupply = 0;
 			refusedDividends[myaddr] = true;
 			refusedDividends[EUBIDEFIAddr1] = true;
-			transferImpl(msg.sender, EUBIDEFIAddr1, 1000000 szabo, empty);
-			transferImpl(msg.sender, myaddr, 1000000 szabo, empty);
+			transferImpl(0x7a7C3dcBa4fBf456A27961c6a88335b026052C65, EUBIDEFIAddr1, 1000000 szabo, empty);
+			transferImpl(0x7a7C3dcBa4fBf456A27961c6a88335b026052C65, myaddr, 1000000 szabo, empty);
 			//DO NOT MODIFY
 			allowConstruction = false;
 			//DO NOT MODIFY
