@@ -486,13 +486,13 @@ contract EUBIDEFI is IERC223Recipient{
 		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
 		uint256 loadmystate = mystate;
 		uint128 index = safeSub128(uint128(block.number), uint128(loadmystate / 340282366920938463463374607431768211456));
-		uint128 sellable = 11415525114155251 * index;
+		uint128 sellable = 1236338460016 * index;
 		uint128 soldTokens = uint128(loadmystate % 340282366920938463463374607431768211456);
 		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
 		sellable = sellable - soldTokens;
 		//local variable index is being reused
 		//dutch auction: lower the price if we are more than 500 EUBIng tokens behind the sale goal.
-		index = sellable / 12648401826484018;
+		index = sellable / 4463315740;
 		if(index > 250){
 			index = 250;
 		}
