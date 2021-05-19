@@ -9,7 +9,7 @@ The trustee service allows creation of revocable/irrevocable trusts.
 
 You send MintME to the EUBIDEFI smart contract (not the EUBIng one). The EUBIDEFI smart contract sends you back EUBIng tokens.
 
-We used a slightly modified version of the dutch auction that is blockchain-friendly: The price is calculated at the time of purchase, and is adjusted for demmand. Whenever someone buys EUBIng tokens at lower than the maximum price of 500 MintME, the price goes up a bit. If the EUBIDEFI dutch auction is behind the sale goal by more than 500 EUBIng tokens, a discount will apply, and if it is behind the sale goal by more than 1000 EUBIng tokens, the minimum price of 250 MintME will be used.
+We used a slightly modified version of the dutch auction that is blockchain-friendly: The price is calculated at the time of purchase, and is adjusted for demmand. Whenever someone buys EUBIng tokens at lower than the maximum price of 500 MintME, the price goes up a bit. If the EUBIDEFI dutch auction is behind the sale goal by more than 1 hour, the minimum price of 250 MintME will be used.
 
 We used the dutch auction since it is very lightweight on gas (only 59700 gas per buy order), and is more blockchain-friendly than the vickrey/english auction.
 
