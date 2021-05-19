@@ -492,9 +492,13 @@ contract EUBIDEFI is IERC223Recipient{
 		sellable = sellable - soldTokens;
 		//local variable index is being reused
 		//dutch auction: lower the price if we are more than 500 EUBIng tokens behind the sale goal.
-		index = sellable / 4463315740;
-		if(index > 250){
-			index = 250;
+		if(sellable > 500 szabo){
+			index = (sellable - 500 szabo) / 500 szabo;
+			if(index > 250){
+				index = 250;
+			}
+		} else{
+		    index = 0;
 		}
 		uint128 price = safeSub128(500000000, safeMul128(index, 1000000));
 		price = uint128(txvalue / price);
