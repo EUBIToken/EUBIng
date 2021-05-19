@@ -426,6 +426,16 @@ contract EUBIDEFI is IERC223Recipient{
 			return c;
 		}
 	}
+	//SafeMath: multiply two numbers
+	function safeMul128(uint128 a, uint128 b) private pure returns (uint128) {
+		if (a == 0) {
+			return 0;
+		} else{
+			uint128 c = a * b;
+			require(c / a == b, "SafeMath: multiplication overflow");
+			return c;
+		}
+	}
 	//SafeMath: divide two numbers
 	function safeDiv(uint256 a, uint256 b) private pure returns (uint256) {
 		if(b == 0){
@@ -476,20 +486,17 @@ contract EUBIDEFI is IERC223Recipient{
 		require(txvalue < 340282366920938463463374607431768211456, "SafeCast: value doesn\'t fit in 128 bits");
 		uint256 loadmystate = mystate;
 		uint128 index = safeSub128(uint128(block.number), uint128(loadmystate / 340282366920938463463374607431768211456));
-		uint128 sellable = (342465753424657532 * index) / 30;
+		uint128 sellable = 11415525114155251 * index;
 		uint128 soldTokens = uint128(loadmystate % 340282366920938463463374607431768211456);
 		require(soldTokens <= sellable, "SafeMath: subtraction overflow");
 		sellable = sellable - soldTokens;
 		//local variable index is being reused
 		//dutch auction: lower the price if we are more than 500 EUBIng tokens behind the sale goal.
-		index = 0;
-		if(sellable > 500 szabo){
-			index = (sellable - 500 szabo) / 2 szabo;
-		}
+		index = sellable / 12648401826484018;
 		if(index > 250){
 			index = 250;
 		}
-		uint128 price = safeSub128(500 ether, index * 1 ether);
+		uint128 price = safeSub128(500000000, safeMul128(index, 1000000));
 		price = uint128(txvalue / price);
 		mystate = safeAdd(loadmystate, price);
 		require(price < sellable, "EUBIDEFI: rate of sale limit exceeded");
