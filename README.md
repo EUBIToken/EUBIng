@@ -21,7 +21,7 @@ Up to 1 Million EUBI classic (deployed and traded on MintMe.com) tokens can be u
 
 ## Roadmap
 
-18/05/2021: MintME deployment and EUBIDEFI deployment
+18/05/2021: MintME deployment and EUBIDEFI deployment (TESTING PERIOD, PLEASE DO NOT USE UNTIL SERVICE LAUNCH!)
 
 Address of EUBIng token contract: 0xfc502c4126fe45456ccc261ad26bca6bca7c4735
 
